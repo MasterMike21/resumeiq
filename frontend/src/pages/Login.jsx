@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogIn, Mail, Lock } from 'lucide-react';
+import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react'; // ✅ Includes Eye icons explicitly
 import { GoogleLogin } from '@react-oauth/google';
 import validator from 'validator';
 
 export default function Login() {
   const [email, setEmail] = useState('');
-  const [showPassword, setShowPassword] = useState(false);  
+  const [password, setPassword] = useState(''); // 🔑 Declared and bound cleanly
+  const [showPassword, setShowPassword] = useState(false); // Visibility state toggle
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Theme state detection (remains active to sync with document classes)
+  // Theme state detection
   const [darkMode] = useState(
     localStorage.getItem('theme') === 'dark' || 
     (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -41,10 +42,9 @@ export default function Login() {
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, { email, password });
       
-      // Save the authentication token string
       localStorage.setItem('token', res.data.token);
       
-      // ✅ Self-healing capture strategy: saves res.data.user OR drops down to the parent object properties
+      // Safe dynamic data extraction fallback layer
       const userData = res.data.user || { name: res.data.name, email: res.data.email, username: res.data.username };
       localStorage.setItem('user', JSON.stringify(userData));
       
@@ -90,6 +90,7 @@ export default function Login() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+            {/* ✅ Integrated eyeball input layout box layout */}
             <div className="relative flex items-center">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                 <Lock size={18} />
@@ -116,7 +117,7 @@ export default function Login() {
           <button 
             type="submit" 
             disabled={loading} 
-            className="w-full py-3 px-4 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 font-medium disabled:opacity-50 transition shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            className="w-full py-3 px-4 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 font-medium disabled:opacity-50 transition shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
@@ -132,7 +133,6 @@ export default function Login() {
                 
                 localStorage.setItem('token', serverRes.data.token);
                 
-                // ✅ Fallback normalized payload layout parsing for Google Authentication
                 const googleUserData = serverRes.data.user || { name: serverRes.data.name, email: serverRes.data.email, username: serverRes.data.username };
                 localStorage.setItem('user', JSON.stringify(googleUserData));
                 
