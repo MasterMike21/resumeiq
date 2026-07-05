@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios'; // ✅ Fixed the import typo from 'ajax' to 'axios'
+import axios from 'axios'; 
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Mail, Lock, User, Check, X } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Check, X, Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import validator from 'validator';
 
@@ -9,6 +9,7 @@ export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // ✅ Password visibility state
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -62,10 +63,9 @@ export default function Signup() {
         password 
       });
       
-      // Save the authentication token
       localStorage.setItem('token', res.data.token);
       
-      // ✅ Self-healing capture strategy: saves res.data.user OR drops down to the parent object properties
+      // ✅ Self-healing capture strategy for backend user structure
       const userData = res.data.user || { name: res.data.name, email: res.data.email, username: res.data.username };
       localStorage.setItem('user', JSON.stringify(userData));
       
@@ -115,9 +115,27 @@ export default function Signup() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500"><Lock size={18} /></div>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors" required />
+            {/* ✅ Updated input wrapper to position the eyeball toggle button perfectly */}
+            <div className="relative flex items-center">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500 pointer-events-none">
+                <Lock size={18} />
+              </div>
+              <input 
+                type={showPassword ? "text" : "password"} 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                placeholder="••••••••" 
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all" 
+                required 
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
             
             <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 space-y-2">
@@ -142,7 +160,6 @@ export default function Signup() {
                 
                 localStorage.setItem('token', serverRes.data.token);
                 
-                // ✅ Normalized parsing fallback layout for Google Signup response parameters
                 const googleUserData = serverRes.data.user || { name: serverRes.data.name, email: serverRes.data.email, username: serverRes.data.username };
                 localStorage.setItem('user', JSON.stringify(googleUserData));
                 
@@ -155,10 +172,7 @@ export default function Signup() {
             shape="pill" 
           />
         </div>
-        
-        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
-          Already registered? <Link to="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Login here</Link>
-        </p>
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">Already registered? <Link to="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Login here</Link></p>
       </div>
     </div>
   );
