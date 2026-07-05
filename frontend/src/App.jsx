@@ -4,11 +4,14 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Navbar from './components/Navbar'; 
 
-// 📂 CORRECT FILE PATH IMPORTS FROM THE PAGES FOLDER
-// Spelled exactly as capitalized in your pages section directory
+// 📂 Core Application Page Imports
 import Dashboard from './pages/Dashboard';
-import Upload from './pages/Upload';   // Double check if this is named Upload.jsx or Analyze.jsx
+import Upload from './pages/Upload'; 
 import Profile from './pages/Profile';
+
+// 📊 IMPORT YOUR REAL METRICS RESULT PAGE HERE!
+// Change this import path if your file has a different name (like Metrics.jsx)
+import Result from './pages/Result'; 
 
 // Protected Route session validator shield wrapper
 const ProtectedRoute = ({ children }) => {
@@ -42,10 +45,13 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           
-          {/* 🔒 Protected Application Routes pointing to your actual page folder files */}
+          {/* 🔒 Protected Application Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          
+          {/* ✅ Added the missing dynamic dynamic ID route parameter to handle metrics reports */}
+          <Route path="/result/:id" element={<ProtectedRoute><Result /></ProtectedRoute>} />
           
           {/* Wildcard Catch-all Fallback */}
           <Route path="*" element={<Navigate to="/login" replace />} />
