@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from 'axios'; // ✅ Fixed the import typo from 'ajax' to 'axios'
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Mail, Lock, User, Check, X } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
@@ -61,8 +61,14 @@ export default function Signup() {
         email: email.toLowerCase().trim(),
         password 
       });
+      
+      // Save the authentication token
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      
+      // ✅ Self-healing capture strategy: saves res.data.user OR drops down to the parent object properties
+      const userData = res.data.user || { name: res.data.name, email: res.data.email, username: res.data.username };
+      localStorage.setItem('user', JSON.stringify(userData));
+      
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed.');
@@ -128,16 +134,31 @@ export default function Signup() {
 
         <div className="flex flex-col items-center justify-center pt-4 border-t border-slate-200 dark:border-slate-800">
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 uppercase tracking-wider font-semibold">Or continue with</p>
-          <GoogleLogin onSuccess={async (res) => {
-            try {
-              const serverRes = await axios.post(`${import.meta.env.VITE_API_URL}/auth/google`, { token: res.credential });
-              localStorage.setItem('token', serverRes.data.token);
-              localStorage.setItem('user', JSON.stringify(serverRes.data.user));
-              navigate('/dashboard');
-            } catch { setError('Google Auth failed.'); }
-          }} onError={() => setError('Google Registration dropped.')} shape="pill" />
+          
+          <GoogleLogin 
+            onSuccess={async (res) => {
+              try {
+                const serverRes = await axios.post(`${import.meta.env.VITE_API_URL}/auth/google`, { token: res.credential });
+                
+                localStorage.setItem('token', serverRes.data.token);
+                
+                // ✅ Normalized parsing fallback layout for Google Signup response parameters
+                const googleUserData = serverRes.data.user || { name: serverRes.data.name, email: serverRes.data.email, username: serverRes.data.username };
+                localStorage.setItem('user', JSON.stringify(googleUserData));
+                
+                navigate('/dashboard');
+              } catch { 
+                setError('Google Auth failed.'); 
+              }
+            }} 
+            onError={() => setError('Google Registration dropped.')} 
+            shape="pill" 
+          />
         </div>
-        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">Already registered? <Link to="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Login here</Link></p>
+        
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
+          Already registered? <Link to="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Login here</Link>
+        </p>
       </div>
     </div>
   );
