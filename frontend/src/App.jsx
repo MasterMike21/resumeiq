@@ -5,6 +5,9 @@ import Signup from './pages/Signup';
 import Navbar from './components/Navbar'; 
 
 // 📂 IMPORT YOUR ACTUAL COMPONENTS HERE
+import Dashboard from './pages/Dashboard';
+import Upload from './pages/Upload'; // Or './components/Analyze' depending on what it's named
+import Profile from './pages/Profile';
 // Adjust the paths below if your files live somewhere else (like src/pages/)
 // For now, these placeholders ensure the app compiles seamlessly.
 const LocalDashboardPlaceholder = () => (
