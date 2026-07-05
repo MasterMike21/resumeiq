@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, FileText, CheckCircle2, AlertCircle, FileCode } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle2, AlertCircle } from 'lucide-react'; // ✅ Removed FileCode import
 
 export default function Upload() {
   const [resumeFile, setResumeFile] = useState(null);
@@ -45,10 +45,7 @@ export default function Upload() {
     setLoading(true);
     const formData = new FormData();
     
-    // Append the primary resume document
     formData.append('resume', resumeFile);
-    
-    // Append the conditional Job Description payloads dynamically
     formData.append('jdMethod', jdMethod);
     if (jdMethod === 'text') {
       formData.append('jobDescriptionText', jdText.trim());
@@ -65,7 +62,6 @@ export default function Upload() {
         },
       });
       
-      // Navigate straight to the freshly created metric analysis page view
       navigate(`/result/${res.data.reportId || res.data._id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Deep analytical processing sequence failed.');
@@ -124,7 +120,6 @@ export default function Upload() {
               Target Job Description
             </h2>
             
-            {/* Toggle Switch Tabs */}
             <div className="flex p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg self-start">
               <button type="button" onClick={() => setJdMethod('text')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${jdMethod === 'text' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
                 Copy-Paste Text
@@ -135,7 +130,6 @@ export default function Upload() {
             </div>
           </div>
 
-          {/* Render Option A: Text area input */}
           {jdMethod === 'text' ? (
             <div>
               <textarea
@@ -147,12 +141,11 @@ export default function Upload() {
               />
             </div>
           ) : (
-            /* Render Option B: Document File Drop Zone */
             <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 cursor-pointer transition-all ${jdFile ? 'border-emerald-500 bg-emerald-50/10 dark:bg-emerald-950/5' : 'border-slate-300 dark:border-slate-700 hover:border-indigo-500'}`}>
               <input type="file" accept=".pdf,.docx,.txt" onChange={handleJdFileChange} className="hidden" />
               {jdFile ? (
                 <div className="text-center">
-                  <FileCode className="mx-auto text-emerald-500 mb-2" size={36} />
+                  <FileText className="mx-auto text-emerald-500 mb-2" size={36} /> {/* ✅ Replaced FileCode with FileText here */}
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{jdFile.name}</p>
                   <p className="text-xs text-slate-400 mt-1">{(jdFile.size / 1024 / 1024).toFixed(2)} MB • Linked</p>
                 </div>
@@ -167,7 +160,6 @@ export default function Upload() {
           )}
         </div>
 
-        {/* SUBMISSION ACTION CAP */}
         <button
           type="submit"
           disabled={loading}
