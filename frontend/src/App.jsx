@@ -4,32 +4,11 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Navbar from './components/Navbar'; 
 
-// 📂 IMPORT YOUR ACTUAL COMPONENTS HERE
+// 📂 IMPORT YOUR REAL ORIGINAL COMPONENTS HERE!
+// Double-check your file tree to make sure these file paths match exactly.
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload'; // Or './components/Analyze' depending on what it's named
 import Profile from './pages/Profile';
-// Adjust the paths below if your files live somewhere else (like src/pages/)
-// For now, these placeholders ensure the app compiles seamlessly.
-const LocalDashboardPlaceholder = () => (
-  <div className="p-8 text-slate-900 dark:text-white">
-    <h1 className="text-2xl font-bold">Dashboard</h1>
-    <p className="text-slate-400 mt-2">Welcome to your core platform hub.</p>
-  </div>
-);
-
-const LocalUploadPlaceholder = () => (
-  <div className="p-8 text-slate-900 dark:text-white">
-    <h1 className="text-2xl font-bold">Analyze Resume</h1>
-    <p className="text-slate-400 mt-2">Upload your layout files here for deep analytical processing.</p>
-  </div>
-);
-
-const LocalProfilePlaceholder = () => (
-  <div className="p-8 text-slate-900 dark:text-white">
-    <h1 className="text-2xl font-bold">User Profile</h1>
-    <p className="text-slate-400 mt-2">Manage your account profile configuration settings.</p>
-  </div>
-);
 
 // Protected Route session validator shield wrapper
 const ProtectedRoute = ({ children }) => {
@@ -63,12 +42,10 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           
-          {/* 🔒 Protected Application Routes */}
-          <Route path="/dashboard" element={<ProtectedRoute><LocalDashboardPlaceholder /></ProtectedRoute>} />
-          
-          {/* Added the missing /upload and /profile paths to accept your token session */}
-          <Route path="/upload" element={<ProtectedRoute><LocalUploadPlaceholder /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><LocalProfilePlaceholder /></ProtectedRoute>} />
+          {/* 🔒 Protected Application Routes pointing to your actual components */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           
           {/* Wildcard Catch-all Fallback */}
           <Route path="*" element={<Navigate to="/login" replace />} />
