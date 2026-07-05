@@ -4,10 +4,10 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Navbar from './components/Navbar'; 
 
-// 📂 IMPORT YOUR REAL ORIGINAL COMPONENTS HERE!
-// Double-check your file tree to make sure these file paths match exactly.
+// 📂 CORRECT FILE PATH IMPORTS FROM THE PAGES FOLDER
+// Spelled exactly as capitalized in your pages section directory
 import Dashboard from './pages/Dashboard';
-import Upload from './pages/Upload'; // Or './components/Analyze' depending on what it's named
+import Upload from './pages/Upload';   // Double check if this is named Upload.jsx or Analyze.jsx
 import Profile from './pages/Profile';
 
 // Protected Route session validator shield wrapper
@@ -42,7 +42,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           
-          {/* 🔒 Protected Application Routes pointing to your actual components */}
+          {/* 🔒 Protected Application Routes pointing to your actual page folder files */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
