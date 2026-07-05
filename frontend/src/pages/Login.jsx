@@ -1,41 +1,121 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
+import { LogIn, Mail, Lock } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    // Strict Email Format Validation check
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a structurally valid email address.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, { email, password });
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, {
+        email,
+        password,
+      });
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify({ name: res.data.name, email: res.data.email }));
+      localStorage.setItem('user', JSON.stringify(res.data.user));
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || 'Invalid credentials parameters. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-8 bg-white border border-slate-200 rounded-2xl shadow-sm">
-      <h2 className="text-2xl font-bold mb-6 text-slate-800">Welcome Back</h2>
-      {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>}
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+      <div className="max-w-md w-full space-y-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-xl transition-colors">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-          <input type="email" required className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <div className="mx-auto h-12 w-12 bg-indigo-50 dark:bg-indigo-950/60 border border-transparent dark:border-indigo-900/50 flex items-center justify-center rounded-xl text-indigo-600 dark:text-indigo-400">
+            <LogIn size={26} />
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Welcome back
+          </h2>
+          <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">
+            Sign in to access your resume analytics engine portal.
+          </p>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-          <input type="password" required className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
-        <button type="submit" className="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition">Sign In</button>
-      </form>
-      <p className="mt-4 text-sm text-center text-slate-600">Don't have an account? <Link to="/signup" className="text-indigo-600 hover:underline">Sign up</Link></p>
+
+        {error && (
+          <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 text-sm px-4 py-3 rounded-xl">
+            {error}
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                  <Mail size={18} />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                  <Lock size={18} />
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900 disabled:opacity-50 transition"
+          >
+            {loading ? 'Authenticating Core Profile...' : 'Sign In'}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
+          Don't have an account?{' '}
+          <Link to="/signup" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+            Create an account
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
