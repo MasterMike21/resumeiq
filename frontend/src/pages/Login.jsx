@@ -40,8 +40,14 @@ export default function Login() {
 
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, { email, password });
+      
+      // Save the authentication token string
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      
+      // ✅ Self-healing capture strategy: saves res.data.user OR drops down to the parent object properties
+      const userData = res.data.user || { name: res.data.name, email: res.data.email, username: res.data.username };
+      localStorage.setItem('user', JSON.stringify(userData));
+      
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid credentials parameters.');
@@ -60,14 +66,25 @@ export default function Login() {
           <h2 className="mt-4 text-center text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back</h2>
         </div>
 
-        {error && <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 text-sm px-4 py-3 rounded-xl">{error}</div>}
+        {error && (
+          <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 text-sm px-4 py-3 rounded-xl">
+            {error}
+          </div>
+        )}
 
         <form className="space-y-4" onSubmit={handleLogin}>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><Mail size={18} /></div>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" required />
+              <input 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                placeholder="name@example.com" 
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                required 
+              />
             </div>
           </div>
 
@@ -75,25 +92,53 @@ export default function Login() {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><Lock size={18} /></div>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" required />
+              <input 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                placeholder="••••••••" 
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+                required 
+              />
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3 px-4 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 font-medium disabled:opacity-50 transition shadow-md">{loading ? 'Authenticating...' : 'Sign In'}</button>
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full py-3 px-4 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 font-medium disabled:opacity-50 transition shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            {loading ? 'Authenticating...' : 'Sign In'}
+          </button>
         </form>
 
         <div className="flex flex-col items-center justify-center pt-4 border-t border-slate-200 dark:border-slate-800">
           <p className="text-xs text-slate-400 mb-3 uppercase tracking-wider font-semibold">Or continue with</p>
-          <GoogleLogin onSuccess={async (res) => {
-            try {
-              const serverRes = await axios.post(`${import.meta.env.VITE_API_URL}/auth/google`, { token: res.credential });
-              localStorage.setItem('token', serverRes.data.token);
-              localStorage.setItem('user', JSON.stringify(serverRes.data.user));
-              navigate('/dashboard');
-            } catch { setError('Google verification failed.'); }
-          }} onError={() => setError('Google Authentication dropped.')} shape="pill" />
+          
+          <GoogleLogin 
+            onSuccess={async (res) => {
+              try {
+                const serverRes = await axios.post(`${import.meta.env.VITE_API_URL}/auth/google`, { token: res.credential });
+                
+                localStorage.setItem('token', serverRes.data.token);
+                
+                // ✅ Fallback normalized payload layout parsing for Google Authentication
+                const googleUserData = serverRes.data.user || { name: serverRes.data.name, email: serverRes.data.email, username: serverRes.data.username };
+                localStorage.setItem('user', JSON.stringify(googleUserData));
+                
+                navigate('/dashboard');
+              } catch { 
+                setError('Google verification failed.'); 
+              }
+            }} 
+            onError={() => setError('Google Authentication dropped.')} 
+            shape="pill" 
+          />
         </div>
-        <p className="text-center text-sm text-slate-500 mt-4">Don't have an account? <Link to="/signup" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Create account</Link></p>
+        
+        <p className="text-center text-sm text-slate-500 mt-4">
+          Don't have an account? <Link to="/signup" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Create account</Link>
+        </p>
       </div>
     </div>
   );
