@@ -9,33 +9,34 @@ dotenv.config();
 
 const app = express();
 
-// Allowed Origins List
+// Explicitly list all frontend deployment variations + localhost
 const allowedOrigins = [
+  'https://resumeiq-lime.vercel.app',
   'https://resumeiq-five.vercel.app',
   'https://resumeiq.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000'
 ];
 
-// Enhanced CORS configuration
+// Enhanced CORS configuration with proper preflight handling
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, or Postman)
+    // Allow requests with no origin (like mobile apps, Postman, or server-to-server)
     if (!origin) return callback(null, true);
     
-    // Check exact origins or vercel.app subdomains
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     } else {
       console.warn(`[CORS] Blocked request from origin: ${origin}`);
-      return callback(new Error('Not allowed by CORS'));
+      return callback(null, false); // Pass false instead of throwing Error to prevent unhandled 500 crashes on preflight
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
+// Express built-in body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
