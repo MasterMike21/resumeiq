@@ -9,21 +9,21 @@ import { analyzeResumeText } from '../services/geminiService.js';
 const router = express.Router();
 const storage = multer.memoryStorage();
 
-// ✅ Configured to accept both multi-mode file asset keys concurrently
+// ✅ Configured to accept multi-mode file asset keys concurrently
 const upload = multer({ storage: storage }).fields([
   { name: 'resume', maxCount: 1 },
   { name: 'jobDescriptionFile', maxCount: 1 }
 ]);
 
-// ✅ Endpoint path updated to match the frontend call: /resume/analyze
+// POST /api/resume/analyze
 router.post('/analyze', protect, upload, async (req, res) => {
-  // Defensive validation ensuring the primary resume file asset arrived safely
+  // Defensive validation ensuring primary resume file asset arrived safely
   if (!req.files || !req.files.resume) {
     return res.status(400).json({ message: 'Missing primary resume file asset.' });
   }
   
   try {
-    // 1. Parse and extract string text layer from the primary resume file buffer
+    // 1. Parse and extract string text layer from primary resume PDF buffer
     const resumeFile = req.files.resume[0];
     const resumePdfData = await pdfParse(resumeFile.buffer);
     const resumeText = resumePdfData.text;
@@ -44,7 +44,7 @@ router.post('/analyze', protect, upload, async (req, res) => {
       targetJobDescription = jdPdfData.text;
     }
 
-    // Validate that a job description actually exists to compare against
+    // Validate that target job description actually exists to compare against
     if (!targetJobDescription || !targetJobDescription.trim()) {
       return res.status(400).json({ message: 'Target job description context could not be resolved or was empty.' });
     }
@@ -78,7 +78,7 @@ router.post('/analyze', protect, upload, async (req, res) => {
   }
 });
 
-// ✅ Route to pull historical single metric assessments down into the frontend
+// GET /api/resume/report/:id
 router.get('/report/:id', protect, async (req, res) => {
   try {
     const report = await AnalysisReport.findById(req.params.id).populate('resume');
