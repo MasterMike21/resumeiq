@@ -4,7 +4,7 @@ dotenv.config();
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// ✅ Updated to accept two distinct textual inputs for cross-analysis matching
+// ✅ Accepts two distinct textual inputs for cross-analysis matching
 export const analyzeResumeText = async (resumeText, jobDescription) => {
   const prompt = `
     You are an expert enterprise-grade ATS (Applicant Tracking System) alignment analyzer. 
@@ -21,7 +21,7 @@ export const analyzeResumeText = async (resumeText, jobDescription) => {
         "projects": 10,
         "keywords": 10
       },
-      "suggestions": ["Incorporate operational scale benchmarks into your software development descriptions", "Mention your Information Technology course alignment or UIET credentials explicitly if applicable"],
+      "suggestions": ["Incorporate operational scale benchmarks into your software development descriptions", "Mention your credentials explicitly if applicable"],
       "skillGap": ["Docker", "Kubernetes", "Next.js"],
       "recommendedRoles": ["Full Stack Engineer", "Software Developer Trainee"]
     }
@@ -43,14 +43,14 @@ export const analyzeResumeText = async (resumeText, jobDescription) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json"
       }
     });
 
-    // Strip trailing newlines or markdown frames out cleanly before object compilation
+    // Parse clean JSON output directly
     return JSON.parse(response.text.trim());
   } catch (error) {
     console.error("Gemini Extraction Framework Failure Log:", error);
