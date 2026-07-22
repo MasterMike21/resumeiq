@@ -2,10 +2,16 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-// ✅ Accepts two distinct textual inputs for cross-analysis matching
 export const analyzeResumeText = async (resumeText, jobDescription) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    console.error("FATAL: GEMINI_API_KEY is missing from environment variables!");
+    throw new Error("GEMINI_API_KEY environment variable is missing.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
   const prompt = `
     You are an expert enterprise-grade ATS (Applicant Tracking System) alignment analyzer. 
     Your task is to comprehensively audit the provided Resume Text against the Target Job Description criteria, cross-matching core keywords, required technologies, and experience parameters.
@@ -21,19 +27,11 @@ export const analyzeResumeText = async (resumeText, jobDescription) => {
         "projects": 10,
         "keywords": 10
       },
-      "suggestions": ["Incorporate operational scale benchmarks into your software development descriptions", "Mention your credentials explicitly if applicable"],
+      "suggestions": ["Incorporate operational scale benchmarks into your software development descriptions"],
       "skillGap": ["Docker", "Kubernetes", "Next.js"],
       "recommendedRoles": ["Full Stack Engineer", "Software Developer Trainee"]
     }
     
-    Scoring Guideline Allocation Protocol (Sum matches atsScore, Max 100 total):
-    - contactInfo: max 10 (Check for email, active contact channels, links)
-    - skills: max 25 (Evaluate technical skill list depth against industry baselines)
-    - education: max 15 (Assess academic qualifications, specialization clarity)
-    - experience: max 25 (Rate project velocity, professional history clarity, bullet item metrics)
-    - projects: max 15 (Audit technical complexity, tool stack diversity, training deployment history)
-    - keywords: max 10 (Strict text density matching against the provided Job Description keywords)
-
     Target Job Description:
     ${jobDescription}
 
@@ -43,17 +41,21 @@ export const analyzeResumeText = async (resumeText, jobDescription) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json"
       }
     });
 
-    // Parse clean JSON output directly
-    return JSON.parse(response.text.trim());
+    const text = response.text || response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error("Empty text response received from Gemini.");
+    }
+
+    return JSON.parse(text.trim());
   } catch (error) {
-    console.error("Gemini Extraction Framework Failure Log:", error);
-    throw new Error("Failed to process target parsing alignment metrics.");
+    console.error("Gemini Failure Detail Log:", error.message || error);
+    throw new Error(`Gemini processing error: ${error.message || error}`);
   }
 };
