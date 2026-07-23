@@ -16,10 +16,23 @@ const getJwtSecret = () => process.env.JWT_SECRET || 'fallback_jwt_secret_key_re
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
-  const { name, email, password } = req.body;
+  const { 
+    name, 
+    username, 
+    email, 
+    password, 
+    targetRole, 
+    experienceLevel, 
+    skills, 
+    githubUrl, 
+    linkedinUrl 
+  } = req.body;
+
   try {
+    const displayName = name || username;
+
     // 1. Name validation
-    if (!name || !/^[a-zA-Z\s]{2,40}$/.test(name.trim())) {
+    if (!displayName || !/^[a-zA-Z\s]{2,40}$/.test(displayName.trim())) {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid name format. Use letters and spaces (2-40 chars).' 
@@ -62,14 +75,19 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // 5. Hash password & Save
+    // 5. Hash password & Save user with career preferences
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(trimmedPassword, salt);
 
     const newUser = new User({
-      name: name.trim(),
+      name: displayName.trim(),
       email: cleanEmail,
-      password: hashedPassword
+      password: hashedPassword,
+      targetRole: targetRole || 'Full-Stack Developer',
+      experienceLevel: experienceLevel || 'Fresher / Entry Level',
+      skills: skills || '',
+      githubUrl: githubUrl || '',
+      linkedinUrl: linkedinUrl || ''
     });
     
     const savedUser = await newUser.save();
@@ -84,7 +102,12 @@ router.post('/signup', async (req, res) => {
     return res.status(201).json({ 
       success: true,
       token, 
-      user: { id: savedUser._id, name: savedUser.name, email: savedUser.email } 
+      user: { 
+        id: savedUser._id, 
+        name: savedUser.name, 
+        email: savedUser.email,
+        targetRole: savedUser.targetRole 
+      } 
     });
 
   } catch (err) {
@@ -143,7 +166,12 @@ router.post('/login', async (req, res) => {
     return res.status(200).json({ 
       success: true,
       token, 
-      user: { id: user._id, name: user.name, email: user.email } 
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email,
+        targetRole: user.targetRole 
+      } 
     });
 
   } catch (err) {
@@ -190,7 +218,9 @@ router.post('/google', async (req, res) => {
       user = new User({ 
         name: name || 'Google User', 
         email: cleanEmail, 
-        password: hashedPassword 
+        password: hashedPassword,
+        targetRole: 'Full-Stack Developer',
+        experienceLevel: 'Fresher / Entry Level'
       });
       await user.save();
     }
@@ -204,7 +234,12 @@ router.post('/google', async (req, res) => {
     return res.status(200).json({ 
       success: true,
       token: appToken, 
-      user: { id: user._id, name: user.name, email: user.email } 
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email,
+        targetRole: user.targetRole 
+      } 
     });
 
   } catch (err) {

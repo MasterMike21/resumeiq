@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import resumeRoutes from './routes/resume.js';
 import apiRoutes from './routes/apiRoutes.js';
+import userRoutes from './routes/user.js';
 
 dotenv.config();
 
@@ -54,6 +55,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api', apiRoutes);
+app.use('/api/user', userRoutes);
 
 // Global Error Handler middleware
 app.use((err, req, res, next) => {
