@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import resumeRoutes from './routes/resume.js';
+import apiRoutes from './routes/apiRoutes.js';
 
 dotenv.config();
 
@@ -52,6 +53,7 @@ app.get('/api/health', (req, res) => {
 // API Route Endpoints
 app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api', apiRoutes);
 
 // Global Error Handler middleware
 app.use((err, req, res, next) => {
