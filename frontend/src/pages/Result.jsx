@@ -23,7 +23,7 @@ export default function Result() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
 
-  // Feature 1 State (Mock Interviewer)
+  // Mock Interviewer State
   const [isInterviewOpen, setIsInterviewOpen] = useState(false);
   const [interviewQuestions, setInterviewQuestions] = useState([]);
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
@@ -32,11 +32,11 @@ export default function Result() {
   const [evaluatingQId, setEvaluatingQId] = useState(null);
   const [currentQIndex, setCurrentQIndex] = useState(0);
 
-  // Feature 2 State (Career Pivot Matrix)
+  // Career Pivot Matrix State
   const [pivotData, setPivotData] = useState(null);
   const [loadingPivot, setLoadingPivot] = useState(false);
 
-  // Feature 3 State (Blind Screening Anonymizer)
+  // Blind Screening State
   const [isBlindMode, setIsBlindMode] = useState(false);
   const [anonymizedText, setAnonymizedText] = useState('');
   const [loadingAnonymize, setLoadingAnonymize] = useState(false);
@@ -72,7 +72,6 @@ export default function Result() {
 
         const reportPayload = res.data?.report || res.data?.data || res.data;
         
-        // Normalize score across varied backend response schemas
         if (reportPayload) {
           reportPayload.atsScore = reportPayload.atsScore ?? reportPayload.score ?? reportPayload.overallScore ?? 0;
         }
@@ -212,7 +211,7 @@ export default function Result() {
         </div>
       </div>
 
-      {/* Feature 3 Banner View */}
+      {/* Recruiter Blind Mode View */}
       {isBlindMode && (
         <div className="bg-slate-900 text-slate-100 p-5 rounded-2xl border border-slate-800 shadow-lg space-y-2">
           <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
@@ -225,7 +224,7 @@ export default function Result() {
         </div>
       )}
 
-      {/* Score and Category Allocation Grid */}
+      {/* Score Grid */}
       <div className="grid md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl flex flex-col items-center justify-center shadow-sm text-center">
           <div className={`text-5xl font-extrabold px-6 py-4 rounded-full mb-3 ${
@@ -289,19 +288,19 @@ export default function Result() {
         </div>
       </div>
 
-      {/* FEATURE 2: Side-by-Side Resume Diff Viewer */}
+      {/* Resume Diff Viewer */}
       <ResumeDiffViewer 
         originalText={report?.originalText || report?.parsedText} 
         optimizedText={report?.optimizedText || report?.enhancedResumeText} 
       />
 
-      {/* FEATURE 3: One-Click XYZ Bullet Tailoring Engine */}
+      {/* XYZ Bullet Tailoring Engine */}
       <JdTailorXyz 
         initialBullets={report?.extractedBullets || suggestions} 
         jobDescription={report?.jobDescription || ''} 
       />
 
-      {/* FEATURE 1 BANNER: AI Mock Interviewer */}
+      {/* AI Mock Interviewer Banner */}
       <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-4 border border-indigo-900/50">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
@@ -321,7 +320,7 @@ export default function Result() {
         </button>
       </div>
 
-      {/* FEATURE 2: Career Pivot Matrix */}
+      {/* Career Pivot Matrix */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-lg flex items-center gap-2">
@@ -376,7 +375,7 @@ export default function Result() {
         )}
       </div>
 
-      {/* FEATURE 1 MODAL */}
+      {/* Mock Interview Modal */}
       {isInterviewOpen && currentQ && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-6 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5">

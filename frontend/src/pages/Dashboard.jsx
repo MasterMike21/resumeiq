@@ -28,7 +28,7 @@ export default function Dashboard() {
       const historyRes = await axios.get(`${API_URL}/api/resume/history`, { headers });
       const rawScans = historyRes.data?.scans || historyRes.data || [];
 
-      // Normalize score property across varied backend schemas (atsScore vs score vs overallScore)
+      // Normalize score property across varied backend schemas
       const normalizedScans = rawScans.map(scan => ({
         ...scan,
         atsScore: scan.atsScore ?? scan.score ?? scan.matchScore ?? scan.overallScore ?? 0
@@ -146,10 +146,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Feature 1: AI Benchmark Gap Analysis */}
+      {/* Benchmark Gap Analysis */}
       <BenchmarkGapAnalysis userProfile={userProfile} latestScan={history[0]} />
 
-      {/* Feature 4: Native PDF Export */}
+      {/* Native PDF Export */}
       <PdfExport 
         name={userProfile?.name || 'Developer Candidate'} 
         role={userProfile?.targetRole || 'Software Engineer'} 

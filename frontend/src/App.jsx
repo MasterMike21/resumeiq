@@ -41,10 +41,10 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           
-          {/* Feature 5: Public Shareable Profile Route */}
+          {/* Feature: Public Shareable Profile Route */}
           <Route path="/p/:username" element={<PublicProfile />} />
 
-          {/* 🔒 Protected Application Routes */}
+          {/* Protected Application Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
