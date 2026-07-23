@@ -1,71 +1,159 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
-import { FileText, ArrowRight, Plus } from 'lucide-react';
 
 export default function Dashboard() {
-  const [reports, setReports] = useState([]);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchHistory = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/dashboard/summary`, {
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await axios.get(`${API_URL}/resume/history`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
-        setReports(res.data);
+        setHistory(res.data?.scans || res.data || []);
       } catch (err) {
-        console.error(err);
+        console.error("Dashboard fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchReports();
-  }, []);
+    fetchHistory();
+  }, [API_URL]);
 
-  if (loading) return <div className="text-center mt-20 text-slate-500 dark:text-slate-400 animate-pulse">Loading dashboard...</div>;
+  // Analytics Computations
+  const totalScans = history.length;
+  const avgScore = totalScans > 0 
+    ? Math.round(history.reduce((acc, curr) => acc + (curr.atsScore || 0), 0) / totalScans) 
+    : 0;
+  const highestScore = totalScans > 0 
+    ? Math.max(...history.map(item => item.atsScore || 0)) 
+    : 0;
+  const initialScore = totalScans > 0 ? (history[history.length - 1]?.atsScore || 0) : 0;
+  const latestScore = totalScans > 0 ? (history[0]?.atsScore || 0) : 0;
+  const scoreImprovement = latestScore - initialScore;
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3 text-slate-400">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm">Fetching historical scan metrics...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-8 text-slate-100">
+      
+      {/* Header Bar */}
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Dashboard</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Review historical scan metrics and baseline tracking vectors.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard & Analytics</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Historical scan metrics, performance deltas, and resume optimization history.
+          </p>
         </div>
-        <Link to="/upload" className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition shadow-md">
-          <Plus size={18} /> New Analysis
-        </Link>
+        <button
+          onClick={() => navigate('/upload')}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition shadow-md"
+        >
+          + New Resume Analysis
+        </button>
       </div>
 
-      {reports.length === 0 ? (
-        <div className="text-center py-20 border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/50 rounded-2xl transition-colors">
-          <FileText className="mx-auto text-slate-400 dark:text-slate-600 mb-4" size={48} />
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">No scanned resumes found</h3>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 mb-6">Upload a document to generate an ATS compatibility assessment report.</p>
-          <Link to="/upload" className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl inline-block font-medium shadow-sm hover:bg-indigo-700">Upload Now</Link>
+      {/* Analytics Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Scans</p>
+          <p className="text-3xl font-extrabold text-slate-100">{totalScans}</p>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {reports.map((report) => (
-            <div key={report._id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md dark:hover:border-slate-700 transition flex flex-col justify-between">
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <div className="bg-indigo-50 dark:bg-indigo-950/60 border border-transparent dark:border-indigo-900/50 p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400"><FileText size={24} /></div>
-                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${report.atsScore >= 75 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-transparent dark:border-emerald-900/30' : report.atsScore >= 50 ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-transparent dark:border-amber-900/30' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-transparent dark:border-rose-900/30'}`}>
-                    {report.atsScore}%
-                  </span>
-                </div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate max-w-full">{report.resume?.fileName}</h3>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Scanned: {new Date(report.createdAt).toLocaleDateString()}</p>
-              </div>
-              <Link to={`/result/${report._id}`} className="mt-6 flex items-center justify-between text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-                View Full Metrics Report <ArrowRight size={16} />
-              </Link>
-            </div>
-          ))}
+
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Average ATS Score</p>
+          <p className="text-3xl font-extrabold text-indigo-400">{avgScore}%</p>
         </div>
-      )}
+
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Peak Score Achieved</p>
+          <p className="text-3xl font-extrabold text-emerald-400">{highestScore}%</p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Historical Delta</p>
+          <p className={`text-3xl font-extrabold ${scoreImprovement >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {scoreImprovement >= 0 ? `+${scoreImprovement}%` : `${scoreImprovement}%`}
+          </p>
+        </div>
+      </div>
+
+      {/* Historical Scans List */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+        <h3 className="text-xl font-bold">Analysis History Log</h3>
+
+        {history.length === 0 ? (
+          <div className="text-center py-12 space-y-3">
+            <div className="text-4xl">📄</div>
+            <p className="text-slate-400 text-sm">No scanned resumes found in your record.</p>
+            <button
+              onClick={() => navigate('/upload')}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-xl text-xs transition"
+            >
+              Upload Now
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
+                  <th className="pb-3 px-2">Document Target</th>
+                  <th className="pb-3 px-2">Target Role</th>
+                  <th className="pb-3 px-2">ATS Score</th>
+                  <th className="pb-3 px-2">Scan Date</th>
+                  <th className="pb-3 px-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {history.map((scan) => (
+                  <tr key={scan._id || scan.id} className="hover:bg-slate-850/50 transition">
+                    <td className="py-3 px-2 font-medium text-slate-200">
+                      {scan.fileName || scan.resume?.fileName || "Uploaded Resume"}
+                    </td>
+                    <td className="py-3 px-2 text-slate-400">
+                      {scan.targetRole || "General Software Track"}
+                    </td>
+                    <td className="py-3 px-2">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                        (scan.atsScore || 0) >= 75 ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
+                        (scan.atsScore || 0) >= 50 ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                        'bg-rose-950 text-rose-400 border border-rose-800'
+                      }`}>
+                        {scan.atsScore ?? 0}%
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 text-slate-400 text-xs">
+                      {scan.createdAt ? new Date(scan.createdAt).toLocaleDateString() : 'Recent'}
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <button
+                        onClick={() => navigate(`/result/${scan._id || scan.id}`)}
+                        className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                      >
+                        View Report
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
