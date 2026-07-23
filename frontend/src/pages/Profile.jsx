@@ -25,7 +25,13 @@ export default function Profile() {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${API_URL}/api/user/profile`, {
+      if (!token) {
+        setMessage({ type: 'error', text: 'Please sign in to view your profile.' });
+        setLoading(false);
+        return;
+      }
+
+      const res = await axios.get(`${API_URL}/api/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -43,7 +49,10 @@ export default function Profile() {
       }
     } catch (err) {
       console.error("Profile fetch error:", err);
-      setMessage({ type: 'error', text: 'Failed to load user profile details.' });
+      setMessage({ 
+        type: 'error', 
+        text: err.response?.data?.message || 'Failed to load user profile details. Try logging in again.' 
+      });
     } finally {
       setLoading(false);
     }
@@ -56,7 +65,7 @@ export default function Profile() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.put(`${API_URL}/api/user/profile`, formData, {
+      const res = await axios.put(`${API_URL}/api/auth/profile`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -65,7 +74,10 @@ export default function Profile() {
       }
     } catch (err) {
       console.error("Profile update error:", err);
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to save changes.' });
+      setMessage({ 
+        type: 'error', 
+        text: err.response?.data?.message || 'Failed to save profile changes.' 
+      });
     } finally {
       setSaving(false);
     }
@@ -85,7 +97,7 @@ export default function Profile() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Your Career Profile</h2>
           <p className="text-slate-400 text-xs mt-1">
-            Update your targets, target role, and tech stack anytime to recalculate AI benchmarks.
+            Update your targets, job roles, and tech stack anytime to recalculate AI benchmarks.
           </p>
         </div>
 

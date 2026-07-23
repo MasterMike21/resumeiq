@@ -14,11 +14,27 @@ const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 // Secret Key check
 const getJwtSecret = () => process.env.JWT_SECRET || 'fallback_jwt_secret_key_resumeiq';
 
+// JWT Auth Middleware for protected endpoints
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Unauthorized: Missing token' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, getJwtSecret());
+    req.userId = decoded.id;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
+};
+
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   const { 
     name, 
-    username, 
     email, 
     password, 
     targetRole, 
@@ -29,10 +45,8 @@ router.post('/signup', async (req, res) => {
   } = req.body;
 
   try {
-    const displayName = name || username;
-
     // 1. Name validation
-    if (!displayName || !/^[a-zA-Z\s]{2,40}$/.test(displayName.trim())) {
+    if (!name || !/^[a-zA-Z\s]{2,40}$/.test(name.trim())) {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid name format. Use letters and spaces (2-40 chars).' 
@@ -75,12 +89,12 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // 5. Hash password & Save user with career preferences
+    // 5. Hash password & Save User with custom benchmark data
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(trimmedPassword, salt);
 
     const newUser = new User({
-      name: displayName.trim(),
+      name: name.trim(),
       email: cleanEmail,
       password: hashedPassword,
       targetRole: targetRole || 'Full-Stack Developer',
@@ -113,7 +127,6 @@ router.post('/signup', async (req, res) => {
   } catch (err) {
     console.error("Signup Error:", err);
 
-    // Handle Mongo duplicate key error specifically
     if (err.code === 11000) {
       return res.status(400).json({ 
         success: false, 
@@ -248,6 +261,50 @@ router.post('/google', async (req, res) => {
       success: false, 
       message: 'Google signature validation fault.' 
     });
+  }
+});
+
+// GET /api/auth/profile - Fetch Profile Data
+router.get('/profile', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User profile not found' });
+    }
+    return res.status(200).json({ success: true, user });
+  } catch (err) {
+    console.error("Profile fetch error:", err);
+    return res.status(500).json({ success: false, message: 'Server error fetching profile' });
+  }
+});
+
+// PUT /api/auth/profile - Save Profile Changes
+router.put('/profile', verifyToken, async (req, res) => {
+  const { name, targetRole, experienceLevel, skills, githubUrl, linkedinUrl } = req.body;
+
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User profile not found' });
+    }
+
+    if (name) user.name = name.trim();
+    if (targetRole !== undefined) user.targetRole = targetRole;
+    if (experienceLevel !== undefined) user.experienceLevel = experienceLevel;
+    if (skills !== undefined) user.skills = skills;
+    if (githubUrl !== undefined) user.githubUrl = githubUrl;
+    if (linkedinUrl !== undefined) user.linkedinUrl = linkedinUrl;
+
+    const updatedUser = await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+  } catch (err) {
+    console.error("Profile update error:", err);
+    return res.status(500).json({ success: false, message: 'Failed to update profile details' });
   }
 });
 
