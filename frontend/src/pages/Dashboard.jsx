@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import MockInterviewModal from '../components/MockInterviewModal';
+import BenchmarkGapAnalysis from '../components/BenchmarkGapAnalysis';
+import PdfExport from '../components/PdfExport';
 
 export default function Dashboard() {
   const [history, setHistory] = useState([]);
@@ -10,20 +12,31 @@ export default function Dashboard() {
   const [isInterviewOpen, setIsInterviewOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Clean raw URL to avoid double `/api/api` errors
   const rawApiUrl = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
   const API_URL = rawApiUrl.replace(/\/api\/?$/, '');
 
   const loadDashboardData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const headers = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache'
+      };
 
-      // 1. Fetch historical scans
+      // 1. Fetch historical scans from database
       const historyRes = await axios.get(`${API_URL}/api/resume/history`, { headers });
-      setHistory(historyRes.data?.scans || historyRes.data || []);
+      const rawScans = historyRes.data?.scans || historyRes.data || [];
 
-      // 2. Fetch profile data for tailored mock interview prep & header greeting
+      // Normalize score property across varied backend schemas (atsScore vs score vs overallScore)
+      const normalizedScans = rawScans.map(scan => ({
+        ...scan,
+        atsScore: scan.atsScore ?? scan.score ?? scan.matchScore ?? scan.overallScore ?? 0
+      }));
+
+      setHistory(normalizedScans);
+
+      // 2. Fetch User Profile
       if (token) {
         try {
           const profileRes = await axios.get(`${API_URL}/api/auth/profile`, { headers });
@@ -44,14 +57,16 @@ export default function Dashboard() {
   useEffect(() => {
     loadDashboardData();
 
-    // Listen for scan completion events across the app to update state live
     window.addEventListener("resumeScanned", loadDashboardData);
+    window.addEventListener("focus", loadDashboardData);
+
     return () => {
       window.removeEventListener("resumeScanned", loadDashboardData);
+      window.removeEventListener("focus", loadDashboardData);
     };
   }, [loadDashboardData]);
 
-  // Analytics Computations
+  // Dynamic Analytics Computations
   const totalScans = history.length;
   const avgScore = totalScans > 0 
     ? Math.round(history.reduce((acc, curr) => acc + (curr.atsScore || 0), 0) / totalScans) 
@@ -106,7 +121,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Analytics Summary Cards */}
+      {/* Dynamic Analytics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Scans</p>
@@ -131,7 +146,17 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Historical Scans List */}
+      {/* Feature 1: AI Benchmark Gap Analysis */}
+      <BenchmarkGapAnalysis userProfile={userProfile} latestScan={history[0]} />
+
+      {/* Feature 4: Native PDF Export */}
+      <PdfExport 
+        name={userProfile?.name || 'Developer Candidate'} 
+        role={userProfile?.targetRole || 'Software Engineer'} 
+        skills={userProfile?.skills || 'React, Node.js, MongoDB, C++'} 
+      />
+
+      {/* History Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
         <h3 className="text-xl font-bold">Analysis History Log</h3>
 
@@ -173,7 +198,7 @@ export default function Dashboard() {
                         (scan.atsScore || 0) >= 50 ? 'bg-amber-950 text-amber-400 border border-amber-800' :
                         'bg-rose-950 text-rose-400 border border-rose-800'
                       }`}>
-                        {scan.atsScore ?? 0}%
+                        {scan.atsScore}%
                       </span>
                     </td>
                     <td className="py-3 px-2 text-slate-400 text-xs">
@@ -195,13 +220,11 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Interactive Mock Interview Practice Session */}
       <MockInterviewModal
         isOpen={isInterviewOpen}
         onClose={() => setIsInterviewOpen(false)}
         userProfile={userProfile}
       />
-
     </div>
   );
 }

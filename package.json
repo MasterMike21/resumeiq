@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "lucide-react": "^1.25.0",
+    "react-diff-viewer-continued": "^4.4.0"
+  }
+}

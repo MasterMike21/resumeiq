@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload'; 
 import Profile from './pages/Profile';
 import Result from './pages/Result'; 
+import PublicProfile from './pages/PublicProfile';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -40,6 +41,9 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           
+          {/* Feature 5: Public Shareable Profile Route */}
+          <Route path="/p/:username" element={<PublicProfile />} />
+
           {/* 🔒 Protected Application Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />

@@ -5,7 +5,7 @@ import { UploadCloud, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function Upload() {
   const [resumeFile, setResumeFile] = useState(null);
-  const [jdMethod, setJdMethod] = useState('text'); // 'text' or 'file'
+  const [jdMethod, setJdMethod] = useState('text');
   const [jdText, setJdText] = useState('');
   const [jdFile, setJdFile] = useState(null);
   
@@ -13,7 +13,6 @@ export default function Upload() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Clean URL to prevent double '/api/api' or trailing slash routing issues
   const rawApiUrl = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
   const API_URL = rawApiUrl.replace(/\/api\/?$/, '');
 
@@ -66,10 +65,16 @@ export default function Upload() {
         },
       });
 
-      // Broadcast event so Dashboard automatically re-fetches and displays the new scan
+      // Save latest scan object to localStorage so Dashboard picks it up dynamically
+      const scanData = res.data?.data || res.data?.scan || res.data;
+      if (scanData) {
+        localStorage.setItem('latestScan', JSON.stringify(scanData));
+      }
+
+      // Signal event for any active listeners
       window.dispatchEvent(new Event("resumeScanned"));
 
-      const reportId = res.data.reportId || res.data._id || res.data.data?._id;
+      const reportId = res.data.reportId || res.data._id || scanData?._id;
       navigate(`/result/${reportId}`);
     } catch (err) {
       console.error("Scan error:", err);
@@ -96,7 +101,7 @@ export default function Upload() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 📄 SECTION 1: RESUME UPLOAD */}
+        {/* RESUME UPLOAD */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm transition-colors">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold">1</span>
@@ -121,7 +126,7 @@ export default function Upload() {
           </label>
         </div>
 
-        {/* 💼 SECTION 2: JOB DESCRIPTION CAPTURE */}
+        {/* JOB DESCRIPTION CAPTURE */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm transition-colors">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">

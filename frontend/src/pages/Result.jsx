@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom'; // FIXED: imported from react-router-dom
+import { useEffect, useState, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import ResumeDiffViewer from '../components/ResumeDiffViewer';
+import JdTailorXyz from '../components/JdTailorXyz';
 
-// Safe Inline SVGs (No dependency issues)
+// Safe Inline SVGs
 const CheckCircleIcon = () => (
   <svg className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -39,22 +41,45 @@ export default function Result() {
   const [anonymizedText, setAnonymizedText] = useState('');
   const [loadingAnonymize, setLoadingAnonymize] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
+  const rawApiUrl = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
+  const API_URL = rawApiUrl.replace(/\/api\/?$/, '');
+
+  const fetchPivotData = useCallback(async (resumeText) => {
+    if (!resumeText) return;
+    setLoadingPivot(true);
+    try {
+      const res = await axios.post(`${API_URL}/api/career/pivot-matrix`, { resumeText });
+      setPivotData(res.data);
+    } catch (err) {
+      console.error("Pivot Matrix failed:", err);
+    } finally {
+      setLoadingPivot(false);
+    }
+  }, [API_URL]);
 
   useEffect(() => {
     const fetchReport = async () => {
       try {
         const token = localStorage.getItem('token');
-        // Primary Endpoint
-        let endpoint = `${API_URL}/resume/report/${id}`;
-        
-        const res = await axios.get(endpoint, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
-        
-        setReport(res.data);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const resumeText = res.data?.resume?.parsedText || res.data?.parsedText || res.data?.resumeText || '';
+        let res;
+        try {
+          res = await axios.get(`${API_URL}/api/resume/result/${id}`, { headers });
+        } catch {
+          res = await axios.get(`${API_URL}/resume/report/${id}`, { headers });
+        }
+
+        const reportPayload = res.data?.report || res.data?.data || res.data;
+        
+        // Normalize score across varied backend response schemas
+        if (reportPayload) {
+          reportPayload.atsScore = reportPayload.atsScore ?? reportPayload.score ?? reportPayload.overallScore ?? 0;
+        }
+
+        setReport(reportPayload);
+
+        const resumeText = reportPayload?.resume?.parsedText || reportPayload?.parsedText || reportPayload?.resumeText || '';
         if (resumeText) {
           fetchPivotData(resumeText);
         }
@@ -69,7 +94,7 @@ export default function Result() {
     if (id) {
       fetchReport();
     }
-  }, [id, API_URL]);
+  }, [id, API_URL, fetchPivotData]);
 
   const handleToggleAnonymizer = async () => {
     const nextState = !isBlindMode;
@@ -86,18 +111,6 @@ export default function Result() {
       } finally {
         setLoadingAnonymize(false);
       }
-    }
-  };
-
-  const fetchPivotData = async (resumeText) => {
-    setLoadingPivot(true);
-    try {
-      const res = await axios.post(`${API_URL}/api/career/pivot-matrix`, { resumeText });
-      setPivotData(res.data);
-    } catch (err) {
-      console.error("Pivot Matrix failed:", err);
-    } finally {
-      setLoadingPivot(false);
     }
   };
 
@@ -164,8 +177,8 @@ export default function Result() {
 
   const breakdownEntries = report.breakdown ? Object.entries(report.breakdown) : [];
   const suggestions = Array.isArray(report.suggestions) ? report.suggestions : [];
-  const skillGaps = Array.isArray(report.skillGap) ? report.skillGap : [];
-  const recommendedRoles = Array.isArray(report.recommendedRoles) ? report.recommendedRoles : [];
+  const skillGaps = Array.isArray(report.skillGap) ? report.skillGap : (Array.isArray(report.missingSkills) ? report.missingSkills : []);
+  const recommendedRoles = Array.isArray(report.recommendedRoles) ? report.recommendedRoles : (Array.isArray(report.pathBlueprints) ? report.pathBlueprints : []);
   const currentQ = interviewQuestions[currentQIndex];
 
   return (
@@ -175,7 +188,7 @@ export default function Result() {
       <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-6 print:hidden">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Analysis Breakdown</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">File Target: {report?.resume?.fileName || 'Uploaded Resume'}</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">File Target: {report?.fileName || report?.resume?.fileName || 'Uploaded Resume'}</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -234,7 +247,7 @@ export default function Result() {
                 <span>{value} pts</span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${(value / 25) * 100}%` }}></div>
+                <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${Math.min(100, (value / 25) * 100)}%` }}></div>
               </div>
             </div>
           )) : (
@@ -275,6 +288,18 @@ export default function Result() {
           ))}
         </div>
       </div>
+
+      {/* FEATURE 2: Side-by-Side Resume Diff Viewer */}
+      <ResumeDiffViewer 
+        originalText={report?.originalText || report?.parsedText} 
+        optimizedText={report?.optimizedText || report?.enhancedResumeText} 
+      />
+
+      {/* FEATURE 3: One-Click XYZ Bullet Tailoring Engine */}
+      <JdTailorXyz 
+        initialBullets={report?.extractedBullets || suggestions} 
+        jobDescription={report?.jobDescription || ''} 
+      />
 
       {/* FEATURE 1 BANNER: AI Mock Interviewer */}
       <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-md flex flex-wrap justify-between items-center gap-4 border border-indigo-900/50">
