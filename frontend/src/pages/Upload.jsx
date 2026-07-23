@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, FileText, CheckCircle2, AlertCircle } from 'lucide-react'; // ✅ Removed FileCode import
+import { UploadCloud, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function Upload() {
   const [resumeFile, setResumeFile] = useState(null);
@@ -12,6 +12,10 @@ export default function Upload() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // Clean URL to prevent double '/api/api' or trailing slash routing issues
+  const rawApiUrl = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
+  const API_URL = rawApiUrl.replace(/\/api\/?$/, '');
 
   const handleResumeChange = (e) => {
     const file = e.target.files[0];
@@ -55,15 +59,20 @@ export default function Upload() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/resume/analyze`, formData, {
+      const res = await axios.post(`${API_URL}/api/resume/analyze`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
+          Authorization: token ? `Bearer ${token}` : '',
         },
       });
-      
-      navigate(`/result/${res.data.reportId || res.data._id}`);
+
+      // Broadcast event so Dashboard automatically re-fetches and displays the new scan
+      window.dispatchEvent(new Event("resumeScanned"));
+
+      const reportId = res.data.reportId || res.data._id || res.data.data?._id;
+      navigate(`/result/${reportId}`);
     } catch (err) {
+      console.error("Scan error:", err);
       setError(err.response?.data?.message || 'Deep analytical processing sequence failed.');
     } finally {
       setLoading(false);
@@ -145,7 +154,7 @@ export default function Upload() {
               <input type="file" accept=".pdf,.docx,.txt" onChange={handleJdFileChange} className="hidden" />
               {jdFile ? (
                 <div className="text-center">
-                  <FileText className="mx-auto text-emerald-500 mb-2" size={36} /> {/* ✅ Replaced FileCode with FileText here */}
+                  <FileText className="mx-auto text-emerald-500 mb-2" size={36} />
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{jdFile.name}</p>
                   <p className="text-xs text-slate-400 mt-1">{(jdFile.size / 1024 / 1024).toFixed(2)} MB • Linked</p>
                 </div>

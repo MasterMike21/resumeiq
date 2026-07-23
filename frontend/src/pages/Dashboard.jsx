@@ -1,29 +1,55 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import MockInterviewModal from '../components/MockInterviewModal';
 
 export default function Dashboard() {
   const [history, setHistory] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isInterviewOpen, setIsInterviewOpen] = useState(false);
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
+
+  // Clean raw URL to avoid double `/api/api` errors
+  const rawApiUrl = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
+  const API_URL = rawApiUrl.replace(/\/api\/?$/, '');
+
+  const loadDashboardData = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      // 1. Fetch historical scans
+      const historyRes = await axios.get(`${API_URL}/api/resume/history`, { headers });
+      setHistory(historyRes.data?.scans || historyRes.data || []);
+
+      // 2. Fetch profile data for tailored mock interview prep & header greeting
+      if (token) {
+        try {
+          const profileRes = await axios.get(`${API_URL}/api/auth/profile`, { headers });
+          if (profileRes.data?.user) {
+            setUserProfile(profileRes.data.user);
+          }
+        } catch (profileErr) {
+          console.warn("Could not load profile metadata:", profileErr);
+        }
+      }
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [API_URL]);
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`${API_URL}/resume/history`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
-        setHistory(res.data?.scans || res.data || []);
-      } catch (err) {
-        console.error("Dashboard fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
+    loadDashboardData();
+
+    // Listen for scan completion events across the app to update state live
+    window.addEventListener("resumeScanned", loadDashboardData);
+    return () => {
+      window.removeEventListener("resumeScanned", loadDashboardData);
     };
-    fetchHistory();
-  }, [API_URL]);
+  }, [loadDashboardData]);
 
   // Analytics Computations
   const totalScans = history.length;
@@ -52,17 +78,32 @@ export default function Dashboard() {
       {/* Header Bar */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard & Analytics</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Dashboard & Analytics
+          </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Historical scan metrics, performance deltas, and resume optimization history.
+            Historical scan metrics, performance deltas, and interview readiness for{' '}
+            <span className="text-indigo-400 font-semibold">
+              {userProfile?.targetRole || 'Software Engineering Tracks'}
+            </span>.
           </p>
         </div>
-        <button
-          onClick={() => navigate('/upload')}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition shadow-md"
-        >
-          + New Resume Analysis
-        </button>
+        
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsInterviewOpen(true)}
+            className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-semibold px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-2"
+          >
+            <span>🎤</span> Launch Mock Interview
+          </button>
+
+          <button
+            onClick={() => navigate('/upload')}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition shadow-md"
+          >
+            + New Resume Analysis
+          </button>
+        </div>
       </div>
 
       {/* Analytics Summary Cards */}
@@ -124,7 +165,7 @@ export default function Dashboard() {
                       {scan.fileName || scan.resume?.fileName || "Uploaded Resume"}
                     </td>
                     <td className="py-3 px-2 text-slate-400">
-                      {scan.targetRole || "General Software Track"}
+                      {scan.targetRole || userProfile?.targetRole || "General Software Track"}
                     </td>
                     <td className="py-3 px-2">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
@@ -153,6 +194,13 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Interactive Mock Interview Practice Session */}
+      <MockInterviewModal
+        isOpen={isInterviewOpen}
+        onClose={() => setIsInterviewOpen(false)}
+        userProfile={userProfile}
+      />
 
     </div>
   );
