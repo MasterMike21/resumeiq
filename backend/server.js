@@ -21,23 +21,30 @@ const allowedOrigins = [
   'http://localhost:3000'
 ];
 
-// Enhanced CORS configuration with proper preflight handling
-app.use(cors({
+// 1. Configure CORS Options
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, Postman, or server-to-server)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     } else {
       console.warn(`[CORS] Blocked request from origin: ${origin}`);
-      return callback(null, false); // Pass false instead of throwing Error to prevent unhandled 500 crashes on preflight
+      return callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 200 // Legacy browser support for 204 response
+};
+
+// 2. Apply CORS middleware globally
+app.use(cors(corsOptions));
+
+// 3. Explicitly handle Preflight OPTIONS requests across all endpoints
+app.options('*', cors(corsOptions));
 
 // Express built-in body parser
 app.use(express.json({ limit: '10mb' }));
@@ -58,6 +65,11 @@ app.use('/api/resume', resumeRoutes);
 app.use('/api/resume', advancedRoutes); // Advanced Feature Routes (XYZ, Benchmark Gap, Public Profile)
 app.use('/api', apiRoutes);
 app.use('/api/user', userRoutes);
+
+// 4. Handle 404 for unmatched API routes cleanly
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
+});
 
 // Global Error Handler middleware
 app.use((err, req, res, next) => {
