@@ -1,17 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react';
+import { useParams } from 'react-router-dom'; // FIXED: imported from react-router-dom
 import axios from 'axios';
 
-// Fallback Inline Icons (Zero dependency issues)
+// Safe Inline SVGs (No dependency issues)
 const CheckCircleIcon = () => (
   <svg className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const AlertTriangleIcon = () => (
-  <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
   </svg>
 );
 
@@ -25,6 +19,7 @@ export default function Result() {
   const { id } = useParams();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   // Feature 1 State (Mock Interviewer)
   const [isInterviewOpen, setIsInterviewOpen] = useState(false);
@@ -50,9 +45,13 @@ export default function Result() {
     const fetchReport = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get(`${API_URL}/resume/report/${id}`, {
+        // Primary Endpoint
+        let endpoint = `${API_URL}/resume/report/${id}`;
+        
+        const res = await axios.get(endpoint, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
+        
         setReport(res.data);
 
         const resumeText = res.data?.resume?.parsedText || res.data?.parsedText || res.data?.resumeText || '';
@@ -61,14 +60,17 @@ export default function Result() {
         }
       } catch (err) {
         console.error("Error fetching report:", err);
+        setFetchError(err.response?.data?.message || "Failed to load report payload.");
       } finally {
         setLoading(false);
       }
     };
-    fetchReport();
-  }, [id]);
 
-  // Handler for Feature 3: Toggle Anonymizer
+    if (id) {
+      fetchReport();
+    }
+  }, [id, API_URL]);
+
   const handleToggleAnonymizer = async () => {
     const nextState = !isBlindMode;
     setIsBlindMode(nextState);
@@ -87,7 +89,6 @@ export default function Result() {
     }
   };
 
-  // Handler for Feature 2: Fetch Career Pivot Data
   const fetchPivotData = async (resumeText) => {
     setLoadingPivot(true);
     try {
@@ -100,7 +101,6 @@ export default function Result() {
     }
   };
 
-  // Handler for Feature 1: Generate AI Mock Interview Questions
   const handleStartInterview = async () => {
     setGeneratingQuestions(true);
     try {
@@ -122,7 +122,6 @@ export default function Result() {
     }
   };
 
-  // Handler for Feature 1: Evaluate Individual Answer
   const handleEvaluateAnswer = async (qId, question, evalCriteria) => {
     const candidateAnswer = answers[qId];
     if (!candidateAnswer?.trim()) return;
@@ -142,9 +141,31 @@ export default function Result() {
     }
   };
 
-  if (loading) return <div className="text-center mt-20 text-slate-500 font-medium">Compiling structural matrix layers...</div>;
-  if (!report) return <div className="text-center mt-20 text-red-500 font-medium">Report details processing fault payload.</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 font-medium text-sm">Compiling structural matrix layers...</p>
+      </div>
+    );
+  }
 
+  if (fetchError || !report) {
+    return (
+      <div className="max-w-md mx-auto mt-20 p-6 bg-rose-50 border border-rose-200 rounded-2xl text-center space-y-3">
+        <h3 className="text-rose-700 font-bold text-lg">Report Payload Error</h3>
+        <p className="text-rose-600 text-sm">{fetchError || "Could not retrieve report data for this ID."}</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-semibold hover:bg-rose-500 transition">
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const breakdownEntries = report.breakdown ? Object.entries(report.breakdown) : [];
+  const suggestions = Array.isArray(report.suggestions) ? report.suggestions : [];
+  const skillGaps = Array.isArray(report.skillGap) ? report.skillGap : [];
+  const recommendedRoles = Array.isArray(report.recommendedRoles) ? report.recommendedRoles : [];
   const currentQ = interviewQuestions[currentQIndex];
 
   return (
@@ -154,11 +175,10 @@ export default function Result() {
       <div className="flex flex-wrap justify-between items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-6 print:hidden">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Analysis Breakdown</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">File Target: {report.resume?.fileName || 'Uploaded Resume'}</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">File Target: {report?.resume?.fileName || 'Uploaded Resume'}</p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Feature 3: Anonymizer Toggle Button */}
           <button
             onClick={handleToggleAnonymizer}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition border ${
@@ -170,7 +190,6 @@ export default function Result() {
             🕶️ {isBlindMode ? 'Blind Audit: ACTIVE' : 'Recruiter Blind Mode'}
           </button>
 
-          {/* Print Button */}
           <button 
             onClick={() => window.print()} 
             className="flex items-center gap-2 border border-slate-300 dark:border-slate-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-900 transition shadow-sm"
@@ -186,9 +205,7 @@ export default function Result() {
           <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
             <span>🕶️ Recruiter Blind Screening (Anonymized View)</span>
           </div>
-          <p className="text-xs text-slate-400">
-            Personal identifiers (Email, Phone, Links, Specific Institutions) have been stripped server-side.
-          </p>
+          <p className="text-xs text-slate-400">Personal identifiers stripped server-side using NLP rules.</p>
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 max-h-40 overflow-y-auto mt-2">
             {loadingAnonymize ? "Scrubbing identifiers..." : (anonymizedText || "No raw text available for sanitization.")}
           </div>
@@ -198,15 +215,19 @@ export default function Result() {
       {/* Score and Category Allocation Grid */}
       <div className="grid md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl flex flex-col items-center justify-center shadow-sm text-center">
-          <div className={`text-5xl font-extrabold px-6 py-4 rounded-full mb-3 ${report.atsScore >= 75 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : report.atsScore >= 50 ? 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400' : 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400'}`}>
-            {report.atsScore}%
+          <div className={`text-5xl font-extrabold px-6 py-4 rounded-full mb-3 ${
+            (report.atsScore || 0) >= 75 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' :
+            (report.atsScore || 0) >= 50 ? 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400' : 
+            'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-400'
+          }`}>
+            {report.atsScore ?? 0}%
           </div>
           <span className="text-sm font-bold uppercase tracking-wider text-slate-400">Overall ATS Score</span>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm md:col-span-2 space-y-3">
           <h3 className="font-bold text-lg mb-2">Category Score Allocations</h3>
-          {Object.entries(report.breakdown || {}).map(([key, value]) => (
+          {breakdownEntries.length > 0 ? breakdownEntries.map(([key, value]) => (
             <div key={key} className="space-y-1">
               <div className="flex justify-between text-sm font-medium">
                 <span className="capitalize text-slate-600 dark:text-slate-400">{key.replace(/([A-Z])/g, ' $1')}</span>
@@ -216,7 +237,9 @@ export default function Result() {
                 <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${(value / 25) * 100}%` }}></div>
               </div>
             </div>
-          ))}
+          )) : (
+            <p className="text-xs text-slate-400">No score breakdown available.</p>
+          )}
         </div>
       </div>
 
@@ -225,7 +248,7 @@ export default function Result() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm space-y-4">
           <h3 className="font-bold text-lg flex items-center gap-2">🏆 Optimization Targets</h3>
           <ul className="space-y-2.5">
-            {report.suggestions?.map((item, idx) => (
+            {suggestions.map((item, idx) => (
               <li key={idx} className="flex gap-2.5 text-sm text-slate-600 dark:text-slate-300 items-start">
                 <CheckCircleIcon /> {item}
               </li>
@@ -236,7 +259,7 @@ export default function Result() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm space-y-4">
           <h3 className="font-bold text-lg flex items-center gap-2">⚠️ Identified Skill Deficiencies</h3>
           <div className="flex flex-wrap gap-2">
-            {report.skillGap?.map((skill, idx) => (
+            {skillGaps.map((skill, idx) => (
               <span key={idx} className="bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-300 px-3 py-1 rounded-lg text-xs font-semibold">{skill}</span>
             ))}
           </div>
@@ -247,7 +270,7 @@ export default function Result() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm space-y-4">
         <h3 className="font-bold text-lg flex items-center gap-2">💼 Recommended Path Blueprints</h3>
         <div className="grid sm:grid-cols-2 gap-3">
-          {report.recommendedRoles?.map((role, idx) => (
+          {recommendedRoles.map((role, idx) => (
             <div key={idx} className="border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 px-4 py-3 rounded-xl text-sm font-medium">{role}</div>
           ))}
         </div>
