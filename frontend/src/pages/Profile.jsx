@@ -16,7 +16,10 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const API_URL = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
+  // Fallback base URL without trailing /api
+  const rawApiUrl = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
+  // Clean URL to prevent double '/api/api' issues
+  const API_URL = rawApiUrl.replace(/\/api\/?$/, '');
 
   useEffect(() => {
     fetchProfile();
@@ -31,6 +34,7 @@ export default function Profile() {
         return;
       }
 
+      // Hits: https://resumeiq-backend-hyg4.onrender.com/api/auth/profile
       const res = await axios.get(`${API_URL}/api/auth/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -65,6 +69,8 @@ export default function Profile() {
 
     try {
       const token = localStorage.getItem('token');
+      
+      // Hits: https://resumeiq-backend-hyg4.onrender.com/api/auth/profile
       const res = await axios.put(`${API_URL}/api/auth/profile`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
