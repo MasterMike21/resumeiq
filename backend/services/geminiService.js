@@ -2,6 +2,9 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Helper function to pause execution (backoff delay)
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const analyzeResumeText = async (resumeText, jobDescription) => {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -39,23 +42,47 @@ export const analyzeResumeText = async (resumeText, jobDescription) => {
     ${resumeText}
   `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json"
+  // Candidate models to attempt in order of preference
+  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  const maxRetriesPerModel = 2;
+
+  for (const modelName of modelsToTry) {
+    for (let attempt = 1; attempt <= maxRetriesPerModel; attempt++) {
+      try {
+        console.log(`[Gemini Engine] Attempting request with model: ${modelName} (Attempt ${attempt}/${maxRetriesPerModel})`);
+
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json"
+          }
+        });
+
+        const text = response.text || response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          throw new Error("Empty text response received from Gemini.");
+        }
+
+        return JSON.parse(text.trim());
+
+      } catch (error) {
+        const is503 = error?.status === 503 || (error?.message && error.message.includes("503"));
+        console.warn(`[Gemini Engine Warning] Model ${modelName} attempt ${attempt} failed:`, error.message || error);
+
+        if (is503 && attempt < maxRetriesPerModel) {
+          // Exponential backoff with random jitter (e.g., wait ~2s, then ~4s)
+          const backoffTime = Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 500);
+          console.log(`[Gemini Engine] 503 High Demand detected. Retrying in ${backoffTime}ms...`);
+          await delay(backoffTime);
+        } else if (!is503) {
+          // If it's a non-503 hard error (like bad format/auth), break out immediately
+          break;
+        }
       }
-    });
-
-    const text = response.text || response.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
-      throw new Error("Empty text response received from Gemini.");
     }
-
-    return JSON.parse(text.trim());
-  } catch (error) {
-    console.error("Gemini Failure Detail Log:", error.message || error);
-    throw new Error(`Gemini processing error: ${error.message || error}`);
+    console.warn(`[Gemini Engine] Model ${modelName} exhausted. Attempting fallback model...`);
   }
+
+  throw new Error("Gemini AI models are currently experiencing high demand. Please try submitting again in a few moments.");
 };
