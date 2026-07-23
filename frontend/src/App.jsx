@@ -4,16 +4,11 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Navbar from './components/Navbar'; 
 
-// 📂 Core Application Page Imports
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload'; 
 import Profile from './pages/Profile';
-
-// 📊 IMPORT YOUR REAL METRICS RESULT PAGE HERE!
-// Change this import path if your file has a different name (like Metrics.jsx)
 import Result from './pages/Result'; 
 
-// Protected Route session validator shield wrapper
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" replace />;
@@ -49,11 +44,9 @@ export default function App() {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          
-          {/* ✅ Added the missing dynamic dynamic ID route parameter to handle metrics reports */}
           <Route path="/result/:id" element={<ProtectedRoute><Result /></ProtectedRoute>} />
           
-          {/* Wildcard Catch-all Fallback */}
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>

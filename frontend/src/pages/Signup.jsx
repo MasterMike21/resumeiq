@@ -9,11 +9,14 @@ export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // ✅ Password visibility state
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Theme state detection
+  // Fallback to Render production backend if VITE_API_URL is missing or local
+  const rawApiUrl = import.meta.env.VITE_API_URL || 'https://resumeiq-backend-hyg4.onrender.com/api';
+  const BASE_API_URL = rawApiUrl.replace(/\/$/, ''); // strip trailing slash if present
+
   const [darkMode] = useState(
     localStorage.getItem('theme') === 'dark' || 
     (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -57,21 +60,31 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/signup`, {
+      const res = await axios.post(`${BASE_API_URL}/auth/signup`, {
         name: name.trim(),
         email: email.toLowerCase().trim(),
         password 
       });
       
-      localStorage.setItem('token', res.data.token);
-      
-      // ✅ Self-healing capture strategy for backend user structure
-      const userData = res.data.user || { name: res.data.name, email: res.data.email, username: res.data.username };
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      navigate('/dashboard');
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+        
+        const userData = res.data.user || { name: res.data.name, email: res.data.email };
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        navigate('/dashboard');
+      } else {
+        setError('Unexpected server response format.');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed.');
+      console.error('Signup Error Debug:', err);
+      if (err.response) {
+        setError(err.response.data?.message || `Server returned error ${err.response.status}`);
+      } else if (err.request) {
+        setError('Unable to reach backend server. Please check internet connection or backend status.');
+      } else {
+        setError(err.message || 'Registration failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -94,14 +107,25 @@ export default function Signup() {
           <h2 className="mt-4 text-center text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Create account</h2>
         </div>
 
-        {error && <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 text-sm px-4 py-3 rounded-xl">{error}</div>}
+        {error && (
+          <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 text-sm px-4 py-3 rounded-xl">
+            {error}
+          </div>
+        )}
 
         <form className="space-y-4" onSubmit={handleSignup}>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500"><User size={18} /></div>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors" required />
+              <input 
+                type="text" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                placeholder="John Doe" 
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors" 
+                required 
+              />
             </div>
           </div>
 
@@ -109,13 +133,19 @@ export default function Signup() {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500"><Mail size={18} /></div>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors" required />
+              <input 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                placeholder="name@example.com" 
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-colors" 
+                required 
+              />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
-            {/* ✅ Updated input wrapper to position the eyeball toggle button perfectly */}
             <div className="relative flex items-center">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500 pointer-events-none">
                 <Lock size={18} />
@@ -147,7 +177,13 @@ export default function Signup() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3 px-4 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 font-medium disabled:opacity-50 transition shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500">{loading ? 'Creating Account...' : 'Register Account'}</button>
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full py-3 px-4 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 font-medium disabled:opacity-50 transition shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {loading ? 'Creating Account...' : 'Register Account'}
+          </button>
         </form>
 
         <div className="flex flex-col items-center justify-center pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -156,23 +192,26 @@ export default function Signup() {
           <GoogleLogin 
             onSuccess={async (res) => {
               try {
-                const serverRes = await axios.post(`${import.meta.env.VITE_API_URL}/auth/google`, { token: res.credential });
+                const serverRes = await axios.post(`${BASE_API_URL}/auth/google`, { token: res.credential });
                 
                 localStorage.setItem('token', serverRes.data.token);
                 
-                const googleUserData = serverRes.data.user || { name: serverRes.data.name, email: serverRes.data.email, username: serverRes.data.username };
+                const googleUserData = serverRes.data.user || { name: serverRes.data.name, email: serverRes.data.email };
                 localStorage.setItem('user', JSON.stringify(googleUserData));
                 
                 navigate('/dashboard');
-              } catch { 
-                setError('Google Auth failed.'); 
+              } catch (googleErr) { 
+                console.error('Google Auth Error:', googleErr);
+                setError(googleErr.response?.data?.message || 'Google Auth failed.'); 
               }
             }} 
             onError={() => setError('Google Registration dropped.')} 
             shape="pill" 
           />
         </div>
-        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">Already registered? <Link to="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Login here</Link></p>
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-4">
+          Already registered? <Link to="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Login here</Link>
+        </p>
       </div>
     </div>
   );
