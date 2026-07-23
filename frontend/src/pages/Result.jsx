@@ -41,8 +41,9 @@ export default function Result() {
   const [anonymizedText, setAnonymizedText] = useState('');
   const [loadingAnonymize, setLoadingAnonymize] = useState(false);
 
+  // Clean base URL to prevent missing or duplicated /api prefixes
   const rawApiUrl = import.meta.env.VITE_API_URL || "https://resumeiq-backend-hyg4.onrender.com";
-  const API_URL = rawApiUrl.replace(/\/api\/?$/, '');
+  const API_URL = rawApiUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
   const fetchPivotData = useCallback(async (resumeText) => {
     if (!resumeText) return;
@@ -67,7 +68,8 @@ export default function Result() {
         try {
           res = await axios.get(`${API_URL}/api/resume/result/${id}`, { headers });
         } catch {
-          res = await axios.get(`${API_URL}/resume/report/${id}`, { headers });
+          // Fallback route using proper /api prefix
+          res = await axios.get(`${API_URL}/api/resume/report/${id}`, { headers });
         }
 
         const reportPayload = res.data?.report || res.data?.data || res.data;
